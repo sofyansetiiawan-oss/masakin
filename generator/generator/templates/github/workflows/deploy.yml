@@ -1,0 +1,38 @@
+name: Build & Deploy Masakin
+
+# Kapan ini otomatis jalan:
+#   - Tiap ada push ke branch main (misal lo update kode/template)
+#   - Terjadwal tiap 6 jam sekali (biar resep baru yang diisi di Sheets ikut ke-generate
+#     tanpa harus push kode manual)
+#   - Bisa juga dipicu manual lewat tab "Actions" di GitHub (tombol "Run workflow")
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Jalankan generator
+        env:
+          GAS_URL: ${{ secrets.GAS_URL }}
+        run: node generator/build.js
+
+      - name: Deploy ke Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: masakin
+          directory: site
